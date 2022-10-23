@@ -1,0 +1,62 @@
+###
+Pay attention to the atom and residue names in the Mol_red1.pdb input file: if the central fragment of
+the ζ-N-methyl-L-Lysine dipeptide is present in a macromolecule downloaded from the protein data
+bank and loaded in the LEaP program from the AmberTools with the chosen force field, the atom and
+residue names in the Mol_red1.pdb input; i. e. these in the Mol_m1/Mol-sm_m1-c1.mol2 force field
+library have to match these in the PDB macromolecule file; please read:
+http://q4md-forcefieldtools.org/Tutorial/Tutorial-4.php#3
+###
+The System.config file:
+
+OPT_Calc = ON
+MEPCHR_Calc = ON
+
+# Checks the nature of the stationary point found after geometry optimization
+# (time consuming step; search for unwanted negative frequencies:
+# select another conformation if negative frequency/ies are found)
+Freq_Calc = ON
+CHR_TYP = RESP-A1
+FFPARM = AMBERFF10
+
+The Project.config file:
+MOLECULE1-TITLE = 6N-methyl-L-Lysine_dipeptide
+MOLECULE1-TOTCHARGE = 1
+MOLECULE1-SPINMULT = 1
+MOLECULE1-ATMREORDR = ON
+→ Create the archive file for the PyRED inputs, run the first PyRED job at https://upjv.q4md-
+forcefieldtools.org/REDServer-Development/, download the ‘Pxxxx.tar.bz2’ archive file and open
+this new archive fil
+
+-II.2- Define specific keywords in the ‘config’ files for the second PyRED job to generate the
+central fragment for the input dipeptide in agreement with AMBERFF14SB or AMBERFF19SB:
+Select pieces of information from the first PyRED job, and prepare the second job in a new directory:
+mkdir Job2
+The geometry of Mol_red1-out.ent is already optimized:
+cp Pxxxx/Data-R.E.D.Server/Data-Default-Proj/Mol_red1-out.ent Job2/Mol_red1.pdb
+cp Pxxxx/Data-R.E.D.Server/Mol_m1/JOB1-gau_m1-1.out Job2/Mol_red1.log
+The geometry optimization step was done in the first job:
+echo ‘OPT_Calc = OFF‘ > Job2/System.config
+echo ‘CHR_TYP = RESP-A1 >> Job2/System.config
+echo ‘FFPARM = AMBERFF10 >> Job2/System.config
+Selected important keywords from the first job in agreement with the new atom order:
+egrep ‘MOLECULE1-TITLE|MOLECULE1-TOTCHARGE|MOLECULE1-ATMTYPE‘ Pxxxx/Data-R.E.D.Server/Data-
+Default-Proj/Project-out.config > Job2/Project.config
+Let’s have a look at the AMBER10 atom types generated in the first PyRED job:
+MOLECULE1-ATMTYPE = CT HC HC HC C O N H CX H1 CT HC HC CT HC HC CT HC HC CT HP HP N3 H H CT
+HP HP HP C O N H CT H1 H1 H1
+One finds the ‘CX’ atom types for the Cα carbon atom defined in Amber10; one also find the ‘CT’
+types for the Cβ, Cγ, Cδ and Cε carbon atoms, but one wants the new ‘C8’ one instead defined in
+AMBERFF14SB. Let’s rename the carbon atom types for the residue side chain: with the new atom
+order the four methylene groups are easily identified:
+sed -i 's|CT HC HC CT HC HC CT HC HC CT HP HP|C8 HC HC C8 HC HC C8 HC HC C8 HP HP|'
+Job2/Project.config
+Add the two intra-molecular charge constraints with the remove ‘flag’ to create the central fragment;
+the atom indexes are easily found when atoms are reordered (the six first indexes for the first charge
+constraint, and the last six indexes for the second constraint):
+echo 'MOLECULE1-INTRA-MCC1 0.0 | 1 2 3 4 5 6 | Remove' >> Job2/Project.config
+echo 'MOLECULE1-INTRA-MCC1 0.0 | 32 33 34 35 36 37 | Remove' >> Job2/Project.config
+Copy the force field parameters from the AmberTools to match the force field one wishes to match:
+cp $AMBERHOME/dat/leap/parm/frcmod.ff14SB Job2/frcmod.user
+Create the archive file for the second job and submit to REDServer-Development:
+tar -zcvf archive.tgz Job2/Mol_red1.pdb Job2/Mol_red1.log Job2/System.config
+Job2/Project.config Job2/frcmod.user
